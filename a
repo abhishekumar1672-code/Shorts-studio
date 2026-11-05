@@ -1,0 +1,929 @@
+/**
+ * ShortsStudio Pro v2 — Hand-Written Production Stylesheet (styles.css)
+ * Round 6 — Low-End Performance + Professional DaVinci Resolve / LumaFusion Layout:
+ * - Unified design-token system (spacing 4/8/12/16, radius, type scale)
+ * - 44 px minimum touch targets & 44 px invisible trim handle hit areas (.trim-handle::before)
+ * - Safe-area insets (env(safe-area-inset-*))
+ * - 150 ms sheet/chip transitions respecting @media (prefers-reduced-motion: reduce)
+ * - Responsive Tablet Landscape (width >= 900px) two-pane layout (preview left, docked sheet right, full-width timeline below)
+ * - Draggable bottom sheet with 30% / 60% / 90% snap points on Phone Portrait
+ * - Skeleton loaders (.skeleton-shimmer), snap indicator line (#timelineSnapLine), and long-press context menu (#clipContextMenu)
+ */
+
+:root {
+  /* Color Tokens */
+  --bg-0: #07070b;
+  --bg-1: #0d0d14;
+  --bg-2: #151520;
+  --bg-3: #1e1e2d;
+  --bg-4: #29293d;
+  --bg-glass: rgba(16, 16, 26, 0.94);
+
+  --text-0: #f8fafc;
+  --text-1: #cbd5e1;
+  --text-2: #94a3b8;
+  --text-3: #64748b;
+
+  --accent: #f43f5e;
+  --accent-hover: #fb7185;
+  --accent-soft: rgba(244, 63, 94, 0.16);
+  --accent-amber: #facc15;
+  --accent-emerald: #10b981;
+  --accent-blue: #38bdf8;
+  --accent-purple: #a855f7;
+
+  --track-video: #e11d48;
+  --track-overlay: #8b5cf6;
+  --track-text: #f59e0b;
+  --track-audio: #0ea5e9;
+  --track-music: #10b981;
+  --track-sfx: #14b8a6;
+
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
+
+  /* Spacing Tokens (4 / 8 / 12 / 16) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+
+  /* Radius Tokens */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+
+  /* Type Scale Tokens */
+  --text-xs: 10px;
+  --text-sm: 12px;
+  --text-md: 14px;
+  --text-lg: 16px;
+
+  --font-sans: 'Inter', 'Noto Sans Devanagari', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Safe-area Insets */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+
+  /* Sheet Snap Height (30% / 60% / 90%) */
+  --sheet-snap-height: 60%;
+  --transition-fast: 150ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --transition-fast: 0ms linear;
+  }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+input, textarea, select {
+  user-select: text;
+  -webkit-user-select: text;
+  font-family: var(--font-sans);
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100dvh;
+  overflow: hidden;
+  background-color: var(--bg-0);
+  color: var(--text-0);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  line-height: 1.4;
+  overscroll-behavior: none;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.svg-icon {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+}
+
+/* =========================================================================
+   APP SHELL & TOP HEADER
+   ========================================================================= */
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100dvh;
+  padding-top: var(--safe-top);
+  padding-bottom: var(--safe-bottom);
+  padding-left: var(--safe-left);
+  padding-right: var(--safe-right);
+  position: relative;
+  overflow: hidden;
+}
+
+.top-header {
+  height: 48px;
+  padding: 0 var(--space-3);
+  background: var(--bg-1);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  z-index: 30;
+}
+
+.header-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* 44px Touch-Target Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-2);
+  color: var(--text-0);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition-fast), transform var(--transition-fast), border-color var(--transition-fast);
+  white-space: nowrap;
+}
+
+.btn:active {
+  transform: scale(0.96);
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.btn-sm {
+  min-height: 36px;
+  padding: 0 var(--space-2);
+  font-size: 11px;
+}
+
+.btn-icon {
+  width: 44px;
+  min-width: 44px;
+  padding: 0;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #f43f5e, #e11d48);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  box-shadow: 0 2px 10px rgba(244, 63, 94, 0.32);
+}
+
+.btn-ai {
+  background: linear-gradient(135deg, #a855f7, #ec4899);
+  border-color: rgba(255, 255, 255, 0.24);
+  color: #ffffff;
+}
+
+.btn-amber {
+  background: rgba(250, 204, 21, 0.16);
+  border-color: rgba(250, 204, 21, 0.45);
+  color: var(--accent-amber);
+}
+
+.btn-emerald {
+  background: rgba(16, 185, 129, 0.18);
+  border-color: rgba(16, 185, 129, 0.45);
+  color: #34d399;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-emerald);
+  display: inline-block;
+}
+
+.status-dot.saving {
+  background: var(--accent-amber);
+  animation: pulseDot 0.9s infinite alternate;
+}
+
+@keyframes pulseDot {
+  from { opacity: 0.35; }
+  to { opacity: 1; }
+}
+
+.perf-badge {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  padding: 4px 8px;
+  min-height: 32px;
+  border-radius: var(--radius-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: rgba(56, 189, 248, 0.14);
+  color: var(--accent-blue);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.perf-badge.low {
+  background: rgba(250, 204, 21, 0.16);
+  color: var(--accent-amber);
+  border-color: rgba(250, 204, 21, 0.35);
+}
+
+/* =========================================================================
+   MAIN WORKSPACE (PHONE PORTRAIT + TABLET LANDSCAPE >= 900PX TWO-PANE)
+   ========================================================================= */
+.workspace-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.workspace-upper-split {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 140px;
+  position: relative;
+  overflow: hidden;
+}
+
+.preview-stage {
+  flex: 1;
+  min-height: 140px;
+  background: radial-gradient(circle at center, #141422 0%, #07070b 100%);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2);
+  overflow: hidden;
+}
+
+.canvas-frame {
+  position: relative;
+  height: 100%;
+  aspect-ratio: 9 / 16;
+  max-height: 100%;
+  max-width: 100%;
+  background: #000000;
+  border-radius: var(--radius-md);
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.preview-canvas,
+.overlay-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.overlay-canvas {
+  pointer-events: none;
+  z-index: 4;
+}
+
+/* Empty State Onboarding Card */
+.empty-state-card {
+  position: absolute;
+  inset: var(--space-3);
+  max-width: 340px;
+  margin: auto;
+  height: fit-content;
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: rgba(15, 15, 25, 0.92);
+  border: 1px solid var(--border-strong);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  text-align: center;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65);
+}
+
+.empty-state-title {
+  font-size: var(--text-lg);
+  font-weight: 800;
+  color: var(--text-0);
+}
+
+.empty-state-sub {
+  font-size: var(--text-sm);
+  color: var(--text-2);
+}
+
+.empty-state-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+/* Floating Stage HUD Badges */
+.stage-float-top-left {
+  position: absolute;
+  top: var(--space-2);
+  left: var(--space-2);
+  display: flex;
+  gap: var(--space-1);
+  z-index: 12;
+}
+
+.stage-float-top-right {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  display: flex;
+  gap: var(--space-1);
+  z-index: 12;
+}
+
+/* YouTube Shorts Safe Zone Guide */
+.safe-zone-guide {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 6;
+  border: 1px dashed rgba(250, 204, 21, 0.45);
+}
+
+.safe-zone-yt-icons {
+  position: absolute;
+  right: 8px;
+  bottom: 58px;
+  width: 38px;
+  height: 135px;
+  border: 1px solid rgba(250, 204, 21, 0.45);
+  background: rgba(250, 204, 21, 0.12);
+  border-radius: var(--radius-sm);
+  font-size: 8px;
+  color: #fde047;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.safe-zone-yt-caption {
+  position: absolute;
+  left: 8px;
+  right: 52px;
+  bottom: 10px;
+  height: 44px;
+  border: 1px solid rgba(250, 204, 21, 0.45);
+  background: rgba(250, 204, 21, 0.12);
+  border-radius: var(--radius-sm);
+  font-size: 9px;
+  color: #fde047;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* =========================================================================
+   TRANSPORT & QUICK EDIT TOOLBAR
+   ========================================================================= */
+.transport-bar {
+  height: 48px;
+  padding: 0 var(--space-2);
+  background: var(--bg-1);
+  border-top: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  z-index: 25;
+}
+
+.timecode-box {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-1);
+  padding: 0 var(--space-1);
+  white-space: nowrap;
+}
+
+.timecode-current {
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.quick-actions-scroll {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.quick-actions-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* =========================================================================
+   VIRTUALIZED MULTI-TRACK MAGNETIC TIMELINE (6 TRACKS + PRO CONTROLS)
+   ========================================================================= */
+.timeline-wrapper {
+  height: 222px;
+  background: var(--bg-1);
+  display: flex;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.track-headers-col {
+  width: 112px;
+  background: var(--bg-1);
+  border-right: 1px solid var(--border-strong);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  z-index: 22;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.track-headers-col::-webkit-scrollbar {
+  display: none;
+}
+
+.ruler-header-corner {
+  height: 24px;
+  padding: 0 var(--space-1);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-2);
+  flex-shrink: 0;
+}
+
+.track-header-item {
+  height: 32px;
+  padding: 0 4px;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  flex-shrink: 0;
+  transition: height var(--transition-fast);
+}
+
+.track-header-item.tall {
+  height: 52px;
+}
+
+.track-header-label {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 9px;
+}
+
+.track-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.track-ctrls-group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.track-ctrl-btn {
+  min-width: 20px;
+  min-height: 22px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-3);
+  color: var(--text-2);
+  font-size: 9px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.track-ctrl-btn.muted {
+  background: var(--accent);
+  color: #ffffff;
+}
+
+.track-ctrl-btn.active-lock {
+  background: var(--accent-amber);
+  color: #09090b;
+}
+
+.track-ctrl-btn.active-solo {
+  background: var(--accent-blue);
+  color: #082f49;
+}
+
+.track-ctrl-btn.active-tall {
+  background: var(--accent-purple);
+  color: #ffffff;
+}
+
+.timeline-scroll-viewport {
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: auto;
+  position: relative;
+  background-color: var(--bg-0);
+  background-image: linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 60px 100%;
+  touch-action: pan-x pan-y;
+}
+
+.timeline-virtual-stage {
+  position: relative;
+  min-height: 100%;
+  min-width: 100%;
+}
+
+.timeline-ruler-canvas {
+  height: 24px;
+  display: block;
+  background: var(--bg-1);
+  border-bottom: 1px solid var(--border-subtle);
+  cursor: pointer;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.timeline-lanes-stack {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.timeline-lane {
+  height: 32px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  position: relative;
+  transition: height var(--transition-fast);
+}
+
+.timeline-lane.tall {
+  height: 52px;
+}
+
+.timeline-lane.locked {
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.015),
+    rgba(255, 255, 255, 0.015) 6px,
+    rgba(0, 0, 0, 0.2) 6px,
+    rgba(0, 0, 0, 0.2) 12px
+  );
+  opacity: 0.78;
+}
+
+/* Virtualized Clip Element (Recycled DOM Pool) */
+.timeline-clip {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  overflow: visible;
+  display: flex;
+  align-items: center;
+  cursor: grab;
+  touch-action: none;
+  will-change: transform, width;
+}
+
+.timeline-clip[data-track="video"] { background: rgba(190, 18, 60, 0.85); }
+.timeline-clip[data-track="overlay"] { background: rgba(109, 40, 217, 0.85); }
+.timeline-clip[data-track="text"] { background: rgba(180, 83, 9, 0.88); }
+.timeline-clip[data-track="audio"] { background: rgba(3, 105, 161, 0.85); }
+.timeline-clip[data-track="music"] { background: rgba(4, 120, 87, 0.85); }
+.timeline-clip[data-track="sfx"] { background: rgba(15, 118, 110, 0.88); }
+
+.timeline-clip.selected {
+  box-shadow: 0 0 0 2px var(--accent-amber), 0 4px 14px rgba(250, 204, 21, 0.35);
+  z-index: 15;
+}
+
+.timeline-clip.multi-selected {
+  box-shadow: 0 0 0 2px var(--accent-blue), 0 4px 12px rgba(56, 189, 248, 0.35);
+  z-index: 14;
+}
+
+.clip-bg-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-sm);
+  opacity: 0.65;
+  pointer-events: none;
+}
+
+.clip-title-bar {
+  position: relative;
+  z-index: 5;
+  padding: 0 var(--space-2);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.clip-badge {
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.58);
+  color: var(--accent-amber);
+  font-size: 8px;
+  font-weight: 700;
+}
+
+.clip-badge.proxy {
+  color: var(--accent-emerald);
+  border: 1px solid rgba(16, 185, 129, 0.45);
+}
+
+/* 44px Touch Hit Area on Trim Handles (Round 6 Item 11) */
+.trim-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 12px;
+  background: var(--accent-amber);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 12;
+  cursor: ew-resize;
+  touch-action: none;
+}
+
+.trim-handle::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  bottom: -8px;
+  width: 44px;
+  left: -16px;
+}
+
+.timeline-clip.selected .trim-handle {
+  display: flex;
+}
+
+.trim-handle-left {
+  left: 0;
+  border-top-left-radius: 5px;
+  border-bottom-left-radius: 5px;
+}
+
+.trim-handle-right {
+  right: 0;
+  border-top-right-radius: 5px;
+  border-bottom-right-radius: 5px;
+}
+
+.trim-handle::after {
+  content: '';
+  width: 2px;
+  height: 12px;
+  background: #09090b;
+  border-radius: 1px;
+}
+
+.clip-kf-container {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 8;
+}
+
+.clip-kf-dot {
+  position: absolute;
+  bottom: 2px;
+  width: 6px;
+  height: 6px;
+  background: var(--accent-amber);
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+
+/* Silence Highlight Zones */
+.silence-marker {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(
+    -45deg,
+    rgba(244, 63, 94, 0.25),
+    rgba(244, 63, 94, 0.25) 5px,
+    rgba(244, 63, 94, 0.45) 5px,
+    rgba(244, 63, 94, 0.45) 10px
+  );
+  border-left: 1px dashed var(--accent);
+  border-right: 1px dashed var(--accent);
+  pointer-events: none;
+  z-index: 9;
+}
+
+/* Snap Indicator Line (Round 6 Item 11) */
+.timeline-snap-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--accent-amber);
+  box-shadow: 0 0 8px rgba(250, 204, 21, 0.85);
+  z-index: 27;
+  pointer-events: none;
+  will-change: transform;
+}
+
+/* Playhead */
+.playhead-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--accent);
+  z-index: 28;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.playhead-head {
+  width: 28px;
+  height: 24px;
+  margin-left: -13px;
+  background: var(--accent);
+  border-radius: 0 0 12px 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  pointer-events: auto;
+  cursor: ew-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.playhead-head::after {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ffffff;
+}
+
+/* =========================================================================
+   DRAGGABLE BOTTOM SHEET (30% / 60% / 90% SNAP POINTS) + TABLET TWO-PANE
+   ========================================================================= */
+.workspace-drawer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--sheet-snap-height, 60%);
+  max-height: 92%;
+  background: var(--bg-glass);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-top: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  box-shadow: 0 -10px 35px rgba(0, 0, 0, 0.72);
+  display: flex;
+  flex-direction: column;
+  z-index: 40;
+  overflow: hidden;
+  transition: height var(--transition-fast);
+}
+
+.drawer-drag-bar {
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: ns-resize;
+  touch-action: none;
+  flex-shrink: 0;
+}
+
+.drawer-drag-pill {
+  width: 42px;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.drawer-header {
+  min-height: 40px;
+  padding: 0 var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.drawer-title {
+  font-size: var(--text-sm);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--accent-hover);
+}
+
+.drawer-subtitle {
+  font-size: var(--text-xs);
+  color: var(--text-2);
+  margin-left: var(--space-2);
+}
+
+.sheet-snap-pills {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.drawer-body {
+  padding: var(--space-3);
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* =========================================================================
+   ROUND 6 ITEM 10: TABLET LANDSCAPE (WIDTH >= 900PX) TWO-PANE LAYOUT
+   Preview Left • Inspector/Media Pool Right • Full-Width Timeline Below
+   ========================================================================= */
+@media 
